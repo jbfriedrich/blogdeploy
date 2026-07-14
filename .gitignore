@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.local.env
+hooks.json
+/srv/
+releases/
+.pytest_cache/
+.DS_Store

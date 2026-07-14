@@ -1,0 +1,12 @@
+BLOGS=jre,oos
+KEEP_RELEASES=5
+
+BLOG_JRE_REPO_URL=https://github.com/jbfriedrich/jason.re.git
+BLOG_JRE_BRANCH=master
+BLOG_JRE_DOMAIN=jason.re
+BLOG_JRE_SERVE_ROOT=/srv/jason.re
+
+BLOG_OOS_REPO_URL=https://github.com/jbfriedrich/outofscope.blog.git
+BLOG_OOS_BRANCH=main
+BLOG_OOS_DOMAIN=outofscope.blog
+BLOG_OOS_SERVE_ROOT=/srv/outofscope.blog

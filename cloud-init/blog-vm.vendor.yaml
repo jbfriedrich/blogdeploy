@@ -1,0 +1,38 @@
+#cloud-config
+# blogdeploy VM: Hugo(extended) + Caddy + webhook (Debian pkg) + the blogdeploy package.
+# NOTE: resolved secrets are NOT here — they are op inject-ed on the workstation and placed
+# on the VM during provisioning (Plan 2): SMTP env at /etc/blogdeploy/.env, the webhook
+# hooks (with HMAC secret) at /etc/webhook.conf. No op CLI on the VM.
+package_update: true
+packages: [git, python3, caddy, webhook]
+write_files:
+  - path: /etc/blogdeploy/blogdeploy.conf
+    permissions: "0644"
+    content: |
+      BLOGS=jre,oos
+      KEEP_RELEASES=5
+      BLOG_JRE_REPO_URL=https://github.com/jbfriedrich/jason.re.git
+      BLOG_JRE_BRANCH=master
+      BLOG_JRE_DOMAIN=jason.re
+      BLOG_JRE_SERVE_ROOT=/srv/jason.re
+      BLOG_OOS_REPO_URL=https://github.com/jbfriedrich/outofscope.blog.git
+      BLOG_OOS_BRANCH=main
+      BLOG_OOS_DOMAIN=outofscope.blog
+      BLOG_OOS_SERVE_ROOT=/srv/outofscope.blog
+runcmd:
+  # pinned Hugo extended
+  - HUGO_VERSION=0.163.3
+  - wget -qO /tmp/hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+  - dpkg -i /tmp/hugo.deb
+  # webhook comes from the Debian package (packages: above). We keep its unit as-is and
+  # only add a drop-in for the two things it lacks: a non-root User and the SMTP env file.
+  - useradd --system --home /opt/blogdeploy --shell /usr/sbin/nologin blogdeploy || true
+  - git clone --depth 1 https://github.com/jbfriedrich/blogdeploy.git /opt/blogdeploy
+  - install -d -o blogdeploy -g blogdeploy /srv/jason.re /srv/outofscope.blog
+  - install -m 0644 /opt/blogdeploy/caddy/Caddyfile /etc/caddy/Caddyfile
+  - install -Dm0644 /opt/blogdeploy/systemd/override.conf /etc/systemd/system/webhook.service.d/override.conf
+  - systemctl daemon-reload
+  - systemctl enable --now caddy
+  # webhook stays inactive until Plan 2 places /etc/webhook.conf (the packaged unit's
+  # ConditionPathExists) and /etc/blogdeploy/.env; enable it so it comes up on boot after.
+  - systemctl enable webhook

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "rebuild-jre",
+    "execute-command": "/usr/bin/python3",
+    "pass-arguments-to-command": [
+      { "source": "string", "name": "-m" },
+      { "source": "string", "name": "blogdeploy" },
+      { "source": "string", "name": "jre" }
+    ],
+    "command-working-directory": "/opt/blogdeploy",
+    "trigger-rule": {
+      "match": {
+        "type": "payload-hmac-sha256",
+        "secret": "{{ op://Vault/blogdeploy-jre-webhook/secret }}",
+        "parameter": { "source": "header", "name": "X-Hub-Signature-256" }
+      }
+    }
+  },
+  {
+    "id": "rebuild-oos",
+    "execute-command": "/usr/bin/python3",
+    "pass-arguments-to-command": [
+      { "source": "string", "name": "-m" },
+      { "source": "string", "name": "blogdeploy" },
+      { "source": "string", "name": "oos" }
+    ],
+    "command-working-directory": "/opt/blogdeploy",
+    "trigger-rule": {
+      "match": {
+        "type": "payload-hmac-sha256",
+        "secret": "{{ op://Vault/blogdeploy-oos-webhook/secret }}",
+        "parameter": { "source": "header", "name": "X-Hub-Signature-256" }
+      }
+    }
+  }
+]

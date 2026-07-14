@@ -1,0 +1,9 @@
+[project]
+name = "blogdeploy"
+version = "0.1.0"
+description = "Webhook-driven static deploy for the blogs"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

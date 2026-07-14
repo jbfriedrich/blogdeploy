@@ -1,0 +1,22 @@
+{
+    auto_https off
+    admin off
+}
+
+:80 {
+    @jason host jason.re
+    handle @jason {
+        root * /srv/jason.re/current
+        file_server
+    }
+
+    @oos host outofscope.blog
+    handle @oos {
+        root * /srv/outofscope.blog/current
+        file_server
+    }
+
+    handle {
+        respond "not found" 404
+    }
+}
