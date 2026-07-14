@@ -4,7 +4,10 @@
 # on the VM during provisioning (Plan 2): SMTP env at /etc/blogdeploy/.env, the webhook
 # hooks (with HMAC secret) at /etc/webhook.conf. No op CLI on the VM.
 package_update: true
-packages: [git, python3, caddy, webhook]
+# caddy is NOT in Debian's default repos — it is added from the Cloudsmith apt repo in
+# runcmd below (mirrors kimono). git/python3/webhook are stock Debian (Trixie ships
+# webhook); the keyring/apt-transport packages are what the Cloudsmith repo needs.
+packages: [git, python3, webhook, debian-keyring, debian-archive-keyring, apt-transport-https]
 write_files:
   - path: /etc/blogdeploy/blogdeploy.conf
     permissions: "0644"
@@ -24,6 +27,11 @@ runcmd:
   - HUGO_VERSION=0.163.3
   - wget -qO /tmp/hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
   - dpkg -i /tmp/hugo.deb
+  # Caddy from the official Cloudsmith apt repo (not in Debian's default repos)
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt-get update
+  - apt-get install -y caddy
   # webhook comes from the Debian package (packages: above). We keep its unit as-is and
   # only add a drop-in for the two things it lacks: a non-root User and the SMTP env file.
   - useradd --system --home /opt/blogdeploy --shell /usr/sbin/nologin blogdeploy || true
