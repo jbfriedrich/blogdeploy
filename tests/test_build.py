@@ -54,13 +54,15 @@ def test_prune_keeps_newest_and_protects_current(tmp_path):
 
 
 class FakeRunner:
-    """Records commands; simulates git clone by writing a fake built site."""
+    """Records commands + env per step; simulates git clone by writing a fake built site."""
     def __init__(self, fail_step: str | None = None):
         self.calls: list[tuple[str, list[str]]] = []
+        self.envs: dict[str, dict] = {}
         self.fail_step = fail_step
 
     def __call__(self, cmd, *, cwd=None, env=None, step=""):
         self.calls.append((step, cmd))
+        self.envs[step] = env or {}
         if step == self.fail_step:
             raise BuildError(step, f"simulated {step} failure")
         if step == "build":
@@ -74,7 +76,7 @@ def test_build_blog_runs_clone_then_build_then_publishes(tmp_path):
     blog = BlogConfig("jre", "https://x/jason.re.git", "master", "jason.re", str(tmp_path / "srv"))
     runner = FakeRunner()
     rel = build_blog(blog, keep=5, runner=runner, now="20260708T120000Z",
-                     workdir=str(tmp_path / "work"))
+                     workdir=str(tmp_path / "work"), cache_root=str(tmp_path / "cache"))
     steps = [s for s, _ in runner.calls]
     assert steps == ["clone", "build"]
     # clone used the right branch + flags
@@ -93,9 +95,36 @@ def test_build_blog_cleans_up_and_raises_on_build_failure(tmp_path):
     runner = FakeRunner(fail_step="build")
     try:
         build_blog(blog, keep=5, runner=runner, now="20260708T130000Z",
-                   workdir=str(tmp_path / "work"))
+                   workdir=str(tmp_path / "work"), cache_root=str(tmp_path / "cache"))
         assert False, "expected BuildError"
     except BuildError as e:
         assert e.step == "build"
     assert not blog.current_link.exists()      # live site never touched
     assert not (tmp_path / "work").exists()    # context cleaned even on failure
+
+
+def test_build_blog_wires_and_creates_persistent_cache(tmp_path):
+    blog = BlogConfig("jre", "https://x/jason.re.git", "master", "jason.re", str(tmp_path / "srv"))
+    cache_root = tmp_path / "cache"
+    runner = FakeRunner()
+    build_blog(blog, keep=5, runner=runner, now="20260716T120000Z",
+               workdir=str(tmp_path / "work"), cache_root=str(cache_root))
+    env = runner.envs["build"]
+    assert env["HUGO_RESOURCEDIR"] == str(cache_root / "jre" / "resources")
+    assert env["HUGO_CACHEDIR"] == str(cache_root / "jre" / "cache")
+    # cache dirs persist — they live outside the cleaned-up workdir
+    assert (cache_root / "jre" / "resources").is_dir()
+    assert (cache_root / "jre" / "cache").is_dir()
+    assert not (tmp_path / "work").exists()
+
+
+def test_build_blog_reuses_existing_cache(tmp_path):
+    blog = BlogConfig("jre", "https://x/jason.re.git", "master", "jason.re", str(tmp_path / "srv"))
+    cache_root = tmp_path / "cache"
+    marker = cache_root / "jre" / "resources" / "_gen" / "keep.txt"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("cached")
+    runner = FakeRunner()
+    build_blog(blog, keep=5, runner=runner, now="20260716T130000Z",
+               workdir=str(tmp_path / "work"), cache_root=str(cache_root))
+    assert marker.read_text() == "cached"   # existing cache reused, not clobbered

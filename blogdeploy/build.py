@@ -10,6 +10,8 @@ from pathlib import Path
 
 from .config import BlogConfig
 
+DEFAULT_CACHE_ROOT = "/var/cache/blogdeploy"
+
 
 def atomic_symlink(target: Path, link: Path) -> None:
     """Point `link` at `target` atomically, replacing any existing `link`."""
@@ -66,8 +68,11 @@ def utc_stamp() -> str:
 
 
 def build_blog(blog: BlogConfig, keep: int, *, runner=run, now: str | None = None,
-               workdir: str | None = None) -> Path:
+               workdir: str | None = None, cache_root: str | None = None) -> Path:
     now = now or utc_stamp()
+    cache = Path(cache_root or DEFAULT_CACHE_ROOT) / blog.key
+    (cache / "resources").mkdir(parents=True, exist_ok=True)
+    (cache / "cache").mkdir(parents=True, exist_ok=True)
     tmp = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix=f"blogdeploy-{blog.key}-"))
     tmp.mkdir(parents=True, exist_ok=True)
     clone = tmp / "src"
@@ -81,7 +86,11 @@ def build_blog(blog: BlogConfig, keep: int, *, runner=run, now: str | None = Non
         runner(
             ["hugo", "--gc", "--minify", "--source", str(clone),
              "--destination", str(public), "--baseURL", blog.base_url],
-            env={"HUGO_ENVIRONMENT": "production", "TZ": "Europe/Berlin"},
+            env={
+                "HUGO_ENVIRONMENT": "production", "TZ": "Europe/Berlin",
+                "HUGO_RESOURCEDIR": str(cache / "resources"),
+                "HUGO_CACHEDIR": str(cache / "cache"),
+            },
             step="build",
         )
         return publish(public, blog, keep, now=now)
