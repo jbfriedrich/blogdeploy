@@ -40,11 +40,16 @@ Two different trust levels are involved, and only the non-secret one is ever com
   These *are* committed, because they hold no secrets, only pointers to where the
   secrets live in 1Password.
 
-Resolving those templates happens on the **workstation**, never on the VM:
+Resolving those templates happens on the **workstation**, never on the VM. Copy each
+committed template to a gitignored local copy, put your real 1Password refs there, then
+inject. (`op inject` resolves `op://` references anywhere in the file — comment lines
+included — so keep reference-shaped tokens out of comments, or the run aborts.)
 
 ```
-op inject -i ref.env -o .env
-op inject -i webhook/hooks.json.tmpl -o hooks.json
+cp ref.env ref.local.env                            # edit: real refs + SMTP host/from
+cp webhook/hooks.json.tmpl webhook/hooks.local.json # edit: real webhook-secret refs
+op inject -i ref.local.env           -o .env
+op inject -i webhook/hooks.local.json -o hooks.json
 ```
 
 The resulting `.env` and `hooks.json` contain real secrets and are gitignored (see

@@ -4,6 +4,7 @@ __pycache__/
 .env
 *.local.env
 hooks.json
+*.local.json
 /srv/
 releases/
 .pytest_cache/
