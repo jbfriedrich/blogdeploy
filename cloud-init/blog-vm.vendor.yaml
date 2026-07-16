@@ -37,6 +37,8 @@ runcmd:
   - useradd --system --home /opt/blogdeploy --shell /usr/sbin/nologin blogdeploy || true
   - git clone --depth 1 https://github.com/jbfriedrich/blogdeploy.git /opt/blogdeploy
   - install -d -o blogdeploy -g blogdeploy /srv/jason.re /srv/outofscope.blog
+  # persistent Hugo cache root (per-blog subdirs are created by blogdeploy at build time)
+  - install -d -o blogdeploy -g blogdeploy /var/cache/blogdeploy
   - install -m 0644 /opt/blogdeploy/caddy/Caddyfile /etc/caddy/Caddyfile
   - install -Dm0644 /opt/blogdeploy/systemd/override.conf /etc/systemd/system/webhook.service.d/override.conf
   - systemctl daemon-reload
