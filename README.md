@@ -70,7 +70,8 @@ never needs 1Password access.
 - `webhook/hooks.json.tmpl` — `webhook` hook definitions (HMAC-signed GitHub webhooks
   trigger `python -m blogdeploy <key>`); resolved to `/etc/webhook.conf` on the VM.
 - `systemd/override.conf` — drop-in over the packaged `webhook.service`: runs the
-  listener as the unprivileged `blogdeploy` user and loads `/etc/blogdeploy/.env`.
+  listener as the unprivileged `blogdeploy` user, loads `/etc/blogdeploy/.env`, and
+  re-declares `ExecStart` with `-verbose` so deliveries are logged (`journalctl -u webhook`).
 - `cloud-init/blog-vm.vendor.yaml` — cloud-init vendor data that provisions a fresh VM:
   installs Hugo (extended, pinned version), Caddy, and `webhook` (Debian package), clones
   this repo, creates the `blogdeploy` user and `/srv/*` directories, and installs the
